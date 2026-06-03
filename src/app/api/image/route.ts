@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 
 // Allow both private (*.blob.vercel-storage.com)
 // and public (*.public.blob.vercel-storage.com) blob URLs
-const ALLOWED_HOSTNAME = /^[a-zA-Z0-9_-]+(\.public)?\.blob\.vercel-storage\.com$/;
+const ALLOWED_HOSTNAME = /^[a-zA-Z0-9_-]+(\.public|\.private)?\.blob\.vercel-storage\.com$/;
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get("url");
