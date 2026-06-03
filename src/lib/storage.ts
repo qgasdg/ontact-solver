@@ -1,5 +1,13 @@
-import { readFile, writeFile } from "fs/promises";
+import { readFile, writeFile, mkdir } from "fs/promises";
 import path from "path";
+
+export const DATA_DIR = path.join(process.cwd(), "data");
+export const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
+
+export async function ensureDirs() {
+  await mkdir(DATA_DIR, { recursive: true });
+  await mkdir(UPLOADS_DIR, { recursive: true });
+}
 
 export interface Problem {
   id: string;
@@ -18,8 +26,8 @@ export interface CurrentProblem {
   status: "solving" | "done";
 }
 
-const PROBLEMS_FILE = path.join(process.cwd(), "data", "problems.json");
-const CURRENT_FILE = path.join(process.cwd(), "data", "current.json");
+const PROBLEMS_FILE = path.join(DATA_DIR, "problems.json");
+const CURRENT_FILE = path.join(DATA_DIR, "current.json");
 
 export async function getProblems(): Promise<Problem[]> {
   try {
@@ -31,6 +39,7 @@ export async function getProblems(): Promise<Problem[]> {
 }
 
 export async function saveProblem(problem: Problem): Promise<void> {
+  await ensureDirs();
   const problems = await getProblems();
   problems.unshift(problem);
   await writeFile(PROBLEMS_FILE, JSON.stringify(problems, null, 2));
@@ -56,5 +65,6 @@ export async function getCurrentProblem(): Promise<CurrentProblem | null> {
 }
 
 export async function setCurrentProblem(problem: CurrentProblem): Promise<void> {
+  await ensureDirs();
   await writeFile(CURRENT_FILE, JSON.stringify(problem));
 }

@@ -3,7 +3,7 @@ import OpenAI from "openai";
 import { writeFile } from "fs/promises";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
-import { setCurrentProblem, saveProblem } from "@/lib/storage";
+import { setCurrentProblem, saveProblem, UPLOADS_DIR } from "@/lib/storage";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
     const filename = `${uuidv4()}.${rawExt}`;
 
     // Save image to public/uploads/ (served as static file)
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await writeFile(path.join(uploadDir, filename), buffer);
+    await writeFile(path.join(UPLOADS_DIR, filename), buffer);
     const imageUrl = `/uploads/${filename}`;
 
     const base64 = buffer.toString("base64");
