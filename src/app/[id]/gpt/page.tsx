@@ -18,10 +18,7 @@ export default async function GptPage({ params }: { params: Promise<{ id: string
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-        <span className="inline-block bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full">
-          {problem.subject}
-        </span>
+      <div className="flex items-center justify-end px-4 py-2 bg-gray-50 border-b border-gray-200 flex-shrink-0">
         <div className="flex gap-4">
           <Link href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
             ← 히스토리

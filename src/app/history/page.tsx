@@ -94,10 +94,7 @@ export default function HistoryPage() {
 
                 {/* Info */}
                 <div className="p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full">
-                      {p.subject}
-                    </span>
+                  <div className="flex items-center justify-end mb-2">
                     <button
                       onClick={() => handleDelete(p.id)}
                       className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors"

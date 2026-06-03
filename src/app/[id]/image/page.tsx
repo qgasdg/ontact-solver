@@ -13,10 +13,7 @@ export default async function ImagePage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="flex flex-col h-screen bg-white">
-      <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 flex-shrink-0">
-        <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">
-          {problem.subject}
-        </span>
+      <div className="flex items-center justify-end px-6 py-3 border-b border-gray-100 flex-shrink-0">
         <div className="flex gap-4">
           <Link href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
             ← 히스토리
