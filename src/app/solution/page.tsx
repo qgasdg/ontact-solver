@@ -5,8 +5,6 @@ import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 
-const SUBJECTS = ["수학", "국어", "영어", "과학", "사회", "역사", "물리", "화학", "생물", "지구과학", "기타"];
-
 interface CurrentProblem {
   id: string;
   imageUrl: string;
@@ -24,13 +22,11 @@ function normalizeLatex(text: string): string {
 
 export default function SolutionPage() {
   const [current, setCurrent] = useState<CurrentProblem | null>(null);
-  const [subject, setSubject] = useState("수학");
   const [solving, setSolving] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastIdRef = useRef<string | null>(null);
 
-  // Poll for current problem
   useEffect(() => {
     const poll = async () => {
       try {
@@ -52,7 +48,6 @@ export default function SolutionPage() {
     try {
       const form = new FormData();
       form.append("image", f);
-      form.append("subject", subject);
       const res = await fetch("/api/solve-current", { method: "POST", body: form });
       if (!res.ok) throw new Error();
 
@@ -72,7 +67,7 @@ export default function SolutionPage() {
     } finally {
       setSolving(false);
     }
-  }, [subject]);
+  }, []);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -104,11 +99,6 @@ export default function SolutionPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3">
-          {current && (
-            <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">
-              {current.subject}
-            </span>
-          )}
           {isSolving && (
             <span className="text-xs text-amber-500 animate-pulse">GPT 풀이 생성 중...</span>
           )}
@@ -118,13 +108,6 @@ export default function SolutionPage() {
         </div>
         <div className="flex items-center gap-3">
           <a href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">← 히스토리</a>
-          <select
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className="text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
-          >
-            {SUBJECTS.map((s) => <option key={s}>{s}</option>)}
-          </select>
           <label className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer underline underline-offset-2">
             사진 업로드
             <input

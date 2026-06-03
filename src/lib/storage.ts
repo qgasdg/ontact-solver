@@ -25,8 +25,9 @@ export interface CurrentProblem {
 //   KV_REST_API_URL set  → Vercel KV  (production / preview)
 //   otherwise            → local filesystem  (local dev without KV)
 // ---------------------------------------------------------------------------
-const useKV = !!process.env.KV_REST_API_URL;
-export const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
+const isProd = process.env.NODE_ENV === "production";
+const useKV = isProd && !!process.env.KV_REST_API_URL;
+export const useBlob = isProd && !!process.env.BLOB_READ_WRITE_TOKEN;
 
 // Local paths
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -108,7 +109,7 @@ export async function uploadImage(
   contentType: string
 ): Promise<string> {
   if (useBlob) {
-    const blob = await put(filename, buffer, { access: "public", contentType });
+    const blob = await put(filename, buffer, { access: "private", contentType });
     return blob.url;
   }
   await ensureDirs();

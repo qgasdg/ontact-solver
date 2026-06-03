@@ -2,8 +2,6 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
-const SUBJECTS = ["수학", "국어", "영어", "과학", "사회", "역사", "물리", "화학", "생물", "지구과학", "기타"];
-
 interface CurrentProblem {
   id: string;
   imageUrl: string;
@@ -14,13 +12,11 @@ interface CurrentProblem {
 export default function ImagePage() {
   const [current, setCurrent] = useState<CurrentProblem | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
-  const [subject, setSubject] = useState("수학");
   const [solving, setSolving] = useState(false);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastIdRef = useRef<string | null>(null);
 
-  // Poll for current problem
   useEffect(() => {
     const poll = async () => {
       try {
@@ -47,18 +43,15 @@ export default function ImagePage() {
     try {
       const form = new FormData();
       form.append("image", f);
-      form.append("subject", subject);
       const res = await fetch("/api/solve-current", { method: "POST", body: form });
       if (!res.ok) throw new Error();
 
-      // Drain stream — server saves result when done
       const r = res.body!.getReader();
       while (true) {
         const { done } = await r.read();
         if (done) break;
       }
 
-      // Fetch updated state
       const updated: CurrentProblem | null = await fetch("/api/current", { cache: "no-store" }).then((r) => r.json());
       if (updated) {
         lastIdRef.current = updated.id;
@@ -70,7 +63,7 @@ export default function ImagePage() {
     } finally {
       setSolving(false);
     }
-  }, [subject]);
+  }, []);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -86,7 +79,7 @@ export default function ImagePage() {
   }, [handleFile]);
 
   const toSrc = (url: string) =>
-    url.startsWith("/") || url.startsWith("https://") ? url : `/api/image?url=${encodeURIComponent(url)}`;
+    url.startsWith("/") ? url : `/api/image?url=${encodeURIComponent(url)}`;
 
   const displaySrc = localPreview
     ? localPreview
@@ -99,24 +92,12 @@ export default function ImagePage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3">
-          {(current || localPreview) && (
-            <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">
-              {current?.subject ?? subject}
-            </span>
-          )}
           {solving && (
             <span className="text-xs text-amber-500 animate-pulse">GPT 풀이 생성 중...</span>
           )}
         </div>
         <div className="flex items-center gap-3">
           <a href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">← 히스토리</a>
-          <select
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            className="text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none"
-          >
-            {SUBJECTS.map((s) => <option key={s}>{s}</option>)}
-          </select>
           <label className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer underline underline-offset-2">
             사진 업로드
             <input
@@ -133,7 +114,6 @@ export default function ImagePage() {
       {/* Content */}
       {displaySrc ? (
         <div className="flex flex-col flex-1 px-8 pt-8 pb-0">
-          {/* Problem image */}
           <div className="flex justify-center mb-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -142,11 +122,9 @@ export default function ImagePage() {
               className="max-w-3xl w-full max-h-[38vh] object-contain rounded-lg border border-gray-100"
             />
           </div>
-          {/* Whitespace for teacher writing */}
           <div className="flex-1 max-w-3xl mx-auto w-full border-t border-gray-100" />
         </div>
       ) : (
-        /* Upload prompt */
         <div
           className={`flex-1 flex flex-col items-center justify-center cursor-pointer transition-colors ${
             dragging ? "bg-indigo-50" : "bg-white"
