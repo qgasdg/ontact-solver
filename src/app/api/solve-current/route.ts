@@ -1,11 +1,13 @@
 import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { writeFile } from "fs/promises";
+import { put } from "@vercel/blob";
 import { v4 as uuidv4 } from "uuid";
 import path from "path";
 import { setCurrentProblem, saveProblem, UPLOADS_DIR } from "@/lib/storage";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const useBlob = !!process.env.BLOB_READ_WRITE_TOKEN;
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,16 +22,25 @@ export async function POST(req: NextRequest) {
     const rawExt = (file.name.split(".").pop() ?? "jpg").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10) || "jpg";
     const filename = `${uuidv4()}.${rawExt}`;
 
-    // Save image to public/uploads/ (served as static file)
-    await writeFile(path.join(UPLOADS_DIR, filename), buffer);
-    const imageUrl = `/uploads/${filename}`;
+    let imageUrl: string;
+    if (useBlob) {
+      // Vercel Blob — public so images can be served without a proxy
+      const blob = await put(filename, buffer, {
+        access: "public",
+        contentType: file.type || "image/jpeg",
+      });
+      imageUrl = blob.url;
+    } else {
+      // Local dev — save to public/uploads/
+      await writeFile(path.join(UPLOADS_DIR, filename), buffer);
+      imageUrl = `/uploads/${filename}`;
+    }
 
     const base64 = buffer.toString("base64");
     const mimeType = file.type || "image/jpeg";
     const problemId = uuidv4();
     const createdAt = new Date().toISOString();
 
-    // Mark as solving so /solution page shows spinner
     await setCurrentProblem({ id: problemId, imageUrl, subject, explanation: "", createdAt, status: "solving" });
 
     const stream = await openai.chat.completions.create({

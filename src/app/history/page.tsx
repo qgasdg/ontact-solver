@@ -12,7 +12,7 @@ interface Problem {
 }
 
 function imgSrc(url: string) {
-  return url.startsWith("/") ? url : `/api/image?url=${encodeURIComponent(url)}`;
+  return url.startsWith("/") || url.startsWith("https://") ? url : `/api/image?url=${encodeURIComponent(url)}`;
 }
 
 export default function HistoryPage() {

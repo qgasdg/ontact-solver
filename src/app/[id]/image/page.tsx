@@ -7,9 +7,10 @@ export default async function ImagePage({ params }: { params: Promise<{ id: stri
   const problem = await getProblemById(id);
   if (!problem) notFound();
 
-  const imgSrc = problem.imageUrl.startsWith("/")
-    ? problem.imageUrl
-    : `/api/image?url=${encodeURIComponent(problem.imageUrl)}`;
+  const imgSrc =
+    problem.imageUrl.startsWith("/") || problem.imageUrl.startsWith("https://")
+      ? problem.imageUrl
+      : `/api/image?url=${encodeURIComponent(problem.imageUrl)}`;
 
   return (
     <div className="flex flex-col h-screen bg-white">

@@ -86,7 +86,7 @@ export default function ImagePage() {
   }, [handleFile]);
 
   const toSrc = (url: string) =>
-    url.startsWith("/") ? url : `/api/image?url=${encodeURIComponent(url)}`;
+    url.startsWith("/") || url.startsWith("https://") ? url : `/api/image?url=${encodeURIComponent(url)}`;
 
   const displaySrc = localPreview
     ? localPreview
