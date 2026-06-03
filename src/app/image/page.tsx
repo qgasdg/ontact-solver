@@ -91,11 +91,7 @@ export default function ImagePage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          {solving && (
-            <span className="text-xs text-amber-500 animate-pulse">GPT 풀이 생성 중...</span>
-          )}
-        </div>
+        <div />
         <div className="flex items-center gap-3">
           <a href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">← 히스토리</a>
           <label className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer underline underline-offset-2">
