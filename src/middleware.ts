@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 const COOKIE_NAME = "admin_session";
 
-const PROTECTED: Array<{ method: string; path: string }> = [
-  { method: "POST", path: "/api/solve-current" },
-  { method: "DELETE", path: "/api/problems" },
-];
+// These paths are always public (no auth required)
+const PUBLIC_PATHS = ["/admin", "/api/admin/login"];
 
 // HMAC-SHA256(salt=SESSION_SECRET, data=password) → hex token
 async function tokenFor(password: string): Promise<string> {
@@ -35,10 +33,8 @@ function constantTimeEqual(a: string, b: string): boolean {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const method = req.method;
 
-  const isProtected = PROTECTED.some((r) => r.path === pathname && r.method === method);
-  if (!isProtected) return NextResponse.next();
+  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
   const adminPassword = process.env.ADMIN_PASSWORD;
   // If ADMIN_PASSWORD is not set (local dev), skip auth
@@ -46,14 +42,19 @@ export async function middleware(req: NextRequest) {
 
   const cookie = req.cookies.get(COOKIE_NAME)?.value ?? "";
   const expected = await tokenFor(adminPassword);
+  const authed = constantTimeEqual(cookie, expected);
 
-  if (!constantTimeEqual(cookie, expected)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!authed) {
+    // API 요청은 401, 페이지 요청은 /admin으로 리다이렉트
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.redirect(new URL("/admin", req.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/api/solve-current", "/api/problems"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
