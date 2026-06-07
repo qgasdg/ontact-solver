@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     return new Response("Invalid url", { status: 400 });
   }
 
-  if (!ALLOWED_HOSTNAME.test(parsed.hostname)) {
+  if (parsed.protocol !== "https:" || !ALLOWED_HOSTNAME.test(parsed.hostname)) {
     return new Response("Forbidden", { status: 403 });
   }
 
@@ -25,9 +25,14 @@ export async function GET(req: NextRequest) {
 
   if (!res.ok) return new Response("Not found", { status: 404 });
 
+  const contentType = res.headers.get("Content-Type") ?? "";
+  if (!contentType.startsWith("image/")) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
   return new Response(res.body, {
     headers: {
-      "Content-Type": res.headers.get("Content-Type") ?? "image/jpeg",
+      "Content-Type": contentType,
       "Cache-Control": "public, max-age=31536000, immutable",
     },
   });

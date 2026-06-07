@@ -44,6 +44,7 @@ export default function ImagePage() {
       const form = new FormData();
       form.append("image", f);
       const res = await fetch("/api/solve-current", { method: "POST", body: form });
+      if (res.status === 401) { window.location.href = "/admin"; return; }
       if (!res.ok) throw new Error();
 
       const r = res.body!.getReader();

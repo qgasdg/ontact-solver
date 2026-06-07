@@ -26,7 +26,7 @@ export interface CurrentProblem {
 //   otherwise            → local filesystem  (local dev without KV)
 // ---------------------------------------------------------------------------
 const isProd = process.env.NODE_ENV === "production";
-const useKV = isProd && !!process.env.KV_REST_API_URL;
+export const useKV = isProd && !!process.env.KV_REST_API_URL;
 export const useBlob = isProd && !!process.env.BLOB_READ_WRITE_TOKEN;
 
 // Local paths
