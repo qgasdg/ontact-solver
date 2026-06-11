@@ -94,7 +94,15 @@ export default function HistoryPage() {
 
                 {/* Info */}
                 <div className="p-3">
-                  <div className="flex items-center justify-end mb-2">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs text-gray-400">
+                      {new Date(p.createdAt).toLocaleDateString("ko-KR", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
                     <button
                       onClick={() => handleDelete(p.id)}
                       className="text-gray-300 hover:text-red-400 text-lg leading-none transition-colors"
@@ -103,14 +111,6 @@ export default function HistoryPage() {
                       ×
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 mb-3">
-                    {new Date(p.createdAt).toLocaleDateString("ko-KR", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
                   <div className="flex gap-2">
                     <Link
                       href={`/${p.id}/image`}
