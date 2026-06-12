@@ -6,7 +6,6 @@ import Link from "next/link";
 interface Problem {
   id: string;
   imageUrl: string;
-  subject: string;
   explanation: string;
   createdAt: string;
 }
@@ -32,7 +31,13 @@ export default function HistoryPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const handleLogout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    window.location.href = "/admin";
+  };
+
   const handleDelete = async (id: string) => {
+    if (!window.confirm("이 문제를 삭제할까요? 이미지도 함께 삭제됩니다.")) return;
     await fetch("/api/problems", {
       method: "DELETE",
       body: JSON.stringify({ id }),
@@ -59,6 +64,12 @@ export default function HistoryPage() {
             >
               풀이 보기 →
             </Link>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-gray-400 hover:text-gray-600 px-2 transition-colors"
+            >
+              로그아웃
+            </button>
           </div>
         </div>
 

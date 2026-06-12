@@ -5,8 +5,12 @@ import { useState, useRef, useCallback, useEffect } from "react";
 interface CurrentProblem {
   id: string;
   imageUrl: string;
-  subject: string;
   status: "solving" | "done";
+}
+
+async function logout() {
+  await fetch("/api/admin/logout", { method: "POST" });
+  window.location.href = "/admin";
 }
 
 export default function ImagePage() {
@@ -113,6 +117,7 @@ export default function ImagePage() {
               onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = ""; }}
             />
           </label>
+          <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">로그아웃</button>
         </div>
       </div>
 

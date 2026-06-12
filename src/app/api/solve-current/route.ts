@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("image") as File;
-    const subject = (formData.get("subject") as string) || "기타";
 
     if (!file) return Response.json({ error: "이미지가 없습니다." }, { status: 400 });
 
@@ -64,7 +63,7 @@ export async function POST(req: NextRequest) {
     const problemId = uuidv4();
     const createdAt = new Date().toISOString();
 
-    await setCurrentProblem({ id: problemId, imageUrl, subject, explanation: "", createdAt, status: "solving" });
+    await setCurrentProblem({ id: problemId, imageUrl, explanation: "", createdAt, status: "solving" });
 
     const stream = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -84,7 +83,7 @@ export async function POST(req: NextRequest) {
           ],
         },
       ],
-      max_tokens: 2000,
+      max_tokens: 4096,
     });
 
     let explanation = "";
@@ -104,7 +103,7 @@ export async function POST(req: NextRequest) {
           }
         };
 
-        safeEnqueue(JSON.stringify({ id: problemId, imageUrl, subject, createdAt }) + "\n");
+        safeEnqueue(JSON.stringify({ id: problemId, imageUrl, createdAt }) + "\n");
 
         // 폴링 클라이언트도 부분 풀이를 볼 수 있게 주기적으로 KV 갱신
         let lastFlush = Date.now();
@@ -118,13 +117,13 @@ export async function POST(req: NextRequest) {
             }
             if (Date.now() - lastFlush > 1500) {
               lastFlush = Date.now();
-              await setCurrentProblem({ id: problemId, imageUrl, subject, explanation, createdAt, status: "solving" });
+              await setCurrentProblem({ id: problemId, imageUrl, explanation, createdAt, status: "solving" });
             }
           }
         } finally {
           await Promise.all([
-            setCurrentProblem({ id: problemId, imageUrl, subject, explanation, createdAt, status: "done" }),
-            saveProblem({ id: problemId, imageUrl, subject, explanation, createdAt }),
+            setCurrentProblem({ id: problemId, imageUrl, explanation, createdAt, status: "done" }),
+            saveProblem({ id: problemId, imageUrl, explanation, createdAt }),
           ]);
         }
 

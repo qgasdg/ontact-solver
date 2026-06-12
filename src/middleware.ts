@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const COOKIE_NAME = "admin_session";
 
 // These paths are always public (no auth required)
-const PUBLIC_PATHS = ["/admin", "/api/admin/login"];
+const PUBLIC_PATHS = ["/admin", "/api/admin/login", "/api/admin/logout"];
 
 // Token: "<expiry>.<hex sig>" — sig = HMAC-SHA256(secret:password, expiry).
 // Mirrors signToken in /api/admin/login (this runs on the Edge runtime, so WebCrypto).

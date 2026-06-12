@@ -8,10 +8,14 @@ import rehypeKatex from "rehype-katex";
 interface CurrentProblem {
   id: string;
   imageUrl: string;
-  subject: string;
   explanation: string;
   createdAt: string;
   status: "solving" | "done";
+}
+
+async function logout() {
+  await fetch("/api/admin/logout", { method: "POST" });
+  window.location.href = "/admin";
 }
 
 function normalizeLatex(text: string): string {
@@ -141,6 +145,7 @@ export default function SolutionPage() {
               onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]); e.target.value = ""; }}
             />
           </label>
+          <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">로그아웃</button>
         </div>
       </div>
 

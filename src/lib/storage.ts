@@ -1,12 +1,11 @@
-import { put } from "@vercel/blob";
+import { put, del } from "@vercel/blob";
 import { kv } from "@vercel/kv";
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { readFile, writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 
 export interface Problem {
   id: string;
   imageUrl: string;
-  subject: string;
   explanation: string;
   createdAt: string;
 }
@@ -14,7 +13,6 @@ export interface Problem {
 export interface CurrentProblem {
   id: string;
   imageUrl: string;
-  subject: string;
   explanation: string;
   createdAt: string;
   status: "solving" | "done";
@@ -69,12 +67,15 @@ export async function getProblemById(id: string): Promise<Problem | undefined> {
 }
 
 export async function deleteProblem(id: string): Promise<void> {
-  const problems = (await getProblems()).filter((p) => p.id !== id);
+  const all = await getProblems();
+  const target = all.find((p) => p.id === id);
+  const problems = all.filter((p) => p.id !== id);
   if (useKV) {
     await kv.set("problems", problems);
   } else {
     await writeFile(PROBLEMS_FILE, JSON.stringify(problems, null, 2));
   }
+  if (target?.imageUrl) await deleteImage(target.imageUrl);
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +103,19 @@ export async function setCurrentProblem(problem: CurrentProblem): Promise<void> 
 // ---------------------------------------------------------------------------
 // Image upload (always Vercel Blob in production, local otherwise)
 // ---------------------------------------------------------------------------
+
+export async function deleteImage(imageUrl: string): Promise<void> {
+  try {
+    if (imageUrl.startsWith("/uploads/")) {
+      // path.basename guards against traversal in a stored URL
+      await unlink(path.join(UPLOADS_DIR, path.basename(imageUrl)));
+    } else if (useBlob) {
+      await del(imageUrl);
+    }
+  } catch {
+    // Best-effort: a missing file/blob shouldn't block record deletion
+  }
+}
 
 export async function uploadImage(
   buffer: Buffer,
