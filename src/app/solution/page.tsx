@@ -23,49 +23,71 @@ function normalizeLatex(text: string): string {
 export default function SolutionPage() {
   const [current, setCurrent] = useState<CurrentProblem | null>(null);
   const [solving, setSolving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lastIdRef = useRef<string | null>(null);
+  // 이 탭에서 직접 스트리밍 중이면 폴링이 더 짧은 부분 풀이로 덮어쓰지 않도록
+  const solvingRef = useRef(false);
 
   useEffect(() => {
     const poll = async () => {
+      if (solvingRef.current) return;
       try {
         const res = await fetch("/api/current", { cache: "no-store" });
         const data: CurrentProblem | null = await res.json();
-        if (data && (data.id !== lastIdRef.current || data.status !== current?.status)) {
-          lastIdRef.current = data.id;
-          setCurrent(data);
-        }
+        if (!data) return;
+        setCurrent((prev) =>
+          !prev ||
+          prev.id !== data.id ||
+          prev.status !== data.status ||
+          prev.explanation !== data.explanation
+            ? data
+            : prev
+        );
       } catch {}
     };
     poll();
     const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
-  }, [current?.status]);
+  }, []);
 
   const handleFile = useCallback(async (f: File) => {
     setSolving(true);
+    solvingRef.current = true;
+    setErrorMsg("");
     try {
       const form = new FormData();
       form.append("image", f);
       const res = await fetch("/api/solve-current", { method: "POST", body: form });
-      if (!res.ok) throw new Error();
+      if (res.status === 401) { window.location.href = "/admin"; return; }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "풀이 생성에 실패했습니다.");
+      }
 
-      const r = res.body!.getReader();
+      // 첫 줄은 메타 JSON, 이후는 풀이 텍스트 스트림 → 실시간 렌더링
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let meta: Omit<CurrentProblem, "explanation" | "status"> | null = null;
       while (true) {
-        const { done } = await r.read();
+        const { done, value } = await reader.read();
         if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        if (!meta) {
+          const nl = buf.indexOf("\n");
+          if (nl === -1) continue;
+          meta = JSON.parse(buf.slice(0, nl));
+          buf = buf.slice(nl + 1);
+        }
+        if (meta) setCurrent({ ...meta, explanation: buf, status: "solving" });
       }
-
-      const updated: CurrentProblem | null = await fetch("/api/current", { cache: "no-store" }).then((r) => r.json());
-      if (updated) {
-        lastIdRef.current = updated.id;
-        setCurrent(updated);
-      }
-    } catch {
-      // keep existing state
+      if (meta) setCurrent({ ...meta, explanation: buf, status: "done" });
+    } catch (err) {
+      setErrorMsg(err instanceof Error && err.message ? err.message : "오류가 발생했습니다.");
     } finally {
       setSolving(false);
+      solvingRef.current = false;
     }
   }, []);
 
@@ -102,9 +124,10 @@ export default function SolutionPage() {
           {isSolving && (
             <span className="text-xs text-amber-500 animate-pulse">GPT 풀이 생성 중...</span>
           )}
-          {current?.status === "done" && !solving && (
+          {current?.status === "done" && !solving && !errorMsg && (
             <span className="text-xs text-green-500">풀이 완료</span>
           )}
+          {errorMsg && <span className="text-xs text-red-500">{errorMsg}</span>}
         </div>
         <div className="flex items-center gap-3">
           <a href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">← 히스토리</a>
@@ -123,7 +146,15 @@ export default function SolutionPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto px-8 py-8">
-        {!current && !isSolving ? (
+        {current?.explanation ? (
+          <div className="max-w-3xl mx-auto">
+            <div className="prose prose-sm max-w-none text-gray-700">
+              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                {normalizeLatex(current.explanation)}
+              </ReactMarkdown>
+            </div>
+          </div>
+        ) : !current && !isSolving ? (
           <div
             className="h-full flex flex-col items-center justify-center cursor-pointer min-h-64"
             onClick={() => fileInputRef.current?.click()}
@@ -138,14 +169,6 @@ export default function SolutionPage() {
           <div className="flex flex-col items-center justify-center min-h-64">
             <div className="text-4xl mb-4 animate-bounce">🤔</div>
             <p className="text-gray-500 animate-pulse">GPT가 풀이를 생성하고 있습니다...</p>
-          </div>
-        ) : current?.explanation ? (
-          <div className="max-w-3xl mx-auto">
-            <div className="prose prose-sm max-w-none text-gray-700">
-              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                {normalizeLatex(current.explanation)}
-              </ReactMarkdown>
-            </div>
           </div>
         ) : null}
       </div>

@@ -13,6 +13,7 @@ export default function ImagePage() {
   const [current, setCurrent] = useState<CurrentProblem | null>(null);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [solving, setSolving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastIdRef = useRef<string | null>(null);
@@ -40,12 +41,16 @@ export default function ImagePage() {
     reader.readAsDataURL(f);
 
     setSolving(true);
+    setErrorMsg("");
     try {
       const form = new FormData();
       form.append("image", f);
       const res = await fetch("/api/solve-current", { method: "POST", body: form });
       if (res.status === 401) { window.location.href = "/admin"; return; }
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "업로드에 실패했습니다.");
+      }
 
       const r = res.body!.getReader();
       while (true) {
@@ -59,8 +64,9 @@ export default function ImagePage() {
         setCurrent(updated);
       }
       setLocalPreview(null);
-    } catch {
+    } catch (err) {
       // keep local preview on error
+      setErrorMsg(err instanceof Error && err.message ? err.message : "오류가 발생했습니다.");
     } finally {
       setSolving(false);
     }
@@ -92,7 +98,9 @@ export default function ImagePage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 flex-shrink-0">
-        <div />
+        <div>
+          {errorMsg && <span className="text-xs text-red-500">{errorMsg}</span>}
+        </div>
         <div className="flex items-center gap-3">
           <a href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">← 히스토리</a>
           <label className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer underline underline-offset-2">

@@ -91,22 +91,48 @@ export async function POST(req: NextRequest) {
 
     const readable = new ReadableStream({
       async start(controller) {
-        const meta = JSON.stringify({ id: problemId, imageUrl, subject, createdAt }) + "\n";
-        controller.enqueue(new TextEncoder().encode(meta));
-
-        for await (const chunk of stream) {
-          const delta = chunk.choices[0]?.delta?.content ?? "";
-          if (delta) {
-            explanation += delta;
-            controller.enqueue(new TextEncoder().encode(delta));
+        const encoder = new TextEncoder();
+        // Keep consuming the OpenAI stream even if the uploader disconnects,
+        // so the solution is still saved and polled clients keep streaming.
+        let clientGone = false;
+        const safeEnqueue = (text: string) => {
+          if (clientGone) return;
+          try {
+            controller.enqueue(encoder.encode(text));
+          } catch {
+            clientGone = true;
           }
+        };
+
+        safeEnqueue(JSON.stringify({ id: problemId, imageUrl, subject, createdAt }) + "\n");
+
+        // 폴링 클라이언트도 부분 풀이를 볼 수 있게 주기적으로 KV 갱신
+        let lastFlush = Date.now();
+
+        try {
+          for await (const chunk of stream) {
+            const delta = chunk.choices[0]?.delta?.content ?? "";
+            if (delta) {
+              explanation += delta;
+              safeEnqueue(delta);
+            }
+            if (Date.now() - lastFlush > 1500) {
+              lastFlush = Date.now();
+              await setCurrentProblem({ id: problemId, imageUrl, subject, explanation, createdAt, status: "solving" });
+            }
+          }
+        } finally {
+          await Promise.all([
+            setCurrentProblem({ id: problemId, imageUrl, subject, explanation, createdAt, status: "done" }),
+            saveProblem({ id: problemId, imageUrl, subject, explanation, createdAt }),
+          ]);
         }
 
-        await Promise.all([
-          setCurrentProblem({ id: problemId, imageUrl, subject, explanation, createdAt, status: "done" }),
-          saveProblem({ id: problemId, imageUrl, subject, explanation, createdAt }),
-        ]);
-        controller.close();
+        if (!clientGone) {
+          try {
+            controller.close();
+          } catch {}
+        }
       },
     });
 
