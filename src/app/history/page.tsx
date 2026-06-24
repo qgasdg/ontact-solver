@@ -8,6 +8,8 @@ interface Problem {
   imageUrl: string;
   explanation: string;
   createdAt: string;
+  studentName?: string;
+  questionNumber?: number;
 }
 
 function imgSrc(url: string) {
@@ -105,7 +107,7 @@ export default function HistoryPage() {
 
                 {/* Info */}
                 <div className="p-3">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-1">
                     <p className="text-xs text-gray-400">
                       {new Date(p.createdAt).toLocaleDateString("ko-KR", {
                         month: "short",
@@ -122,6 +124,14 @@ export default function HistoryPage() {
                       ×
                     </button>
                   </div>
+                  {(p.studentName || p.questionNumber != null) && (
+                    <p className="text-sm font-medium text-indigo-600 mb-2">
+                      {p.studentName && <span>{p.studentName}</span>}
+                      {p.questionNumber != null && (
+                        <span className="ml-1 text-gray-400 font-normal">#{p.questionNumber}번</span>
+                      )}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <Link
                       href={`/${p.id}/image`}

@@ -8,6 +8,8 @@ export interface Problem {
   imageUrl: string;
   explanation: string;
   createdAt: string;
+  studentName?: string;
+  questionNumber?: number;
 }
 
 export interface CurrentProblem {
@@ -16,6 +18,13 @@ export interface CurrentProblem {
   explanation: string;
   createdAt: string;
   status: "solving" | "done";
+  studentName?: string;
+  questionNumber?: number;
+}
+
+export async function getNextQuestionNumber(): Promise<number> {
+  const problems = await getProblems();
+  return problems.length + 1;
 }
 
 // ---------------------------------------------------------------------------

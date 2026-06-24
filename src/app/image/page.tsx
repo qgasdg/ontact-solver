@@ -6,6 +6,8 @@ interface CurrentProblem {
   id: string;
   imageUrl: string;
   status: "solving" | "done";
+  studentName?: string;
+  questionNumber?: number;
 }
 
 async function logout() {
@@ -19,6 +21,7 @@ export default function ImagePage() {
   const [solving, setSolving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [studentName, setStudentName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lastIdRef = useRef<string | null>(null);
 
@@ -49,6 +52,7 @@ export default function ImagePage() {
     try {
       const form = new FormData();
       form.append("image", f);
+      form.append("studentName", studentName);
       const res = await fetch("/api/solve-current", { method: "POST", body: form });
       if (res.status === 401) { window.location.href = "/admin"; return; }
       if (!res.ok) {
@@ -74,7 +78,7 @@ export default function ImagePage() {
     } finally {
       setSolving(false);
     }
-  }, []);
+  }, [studentName]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -102,7 +106,20 @@ export default function ImagePage() {
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 flex-shrink-0">
-        <div>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={studentName}
+            onChange={(e) => setStudentName(e.target.value)}
+            placeholder="학생 이름"
+            className="text-sm border border-gray-200 rounded-md px-2 py-1 w-32 focus:outline-none focus:border-indigo-300"
+          />
+          {current?.studentName && (
+            <span className="text-sm font-medium text-indigo-600">
+              {current.studentName}
+              {current.questionNumber != null && <span className="ml-1 text-gray-400 font-normal">#{current.questionNumber}번</span>}
+            </span>
+          )}
           {errorMsg && <span className="text-xs text-red-500">{errorMsg}</span>}
         </div>
         <div className="flex items-center gap-3">

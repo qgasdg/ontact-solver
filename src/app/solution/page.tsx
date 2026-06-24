@@ -11,6 +11,8 @@ interface CurrentProblem {
   explanation: string;
   createdAt: string;
   status: "solving" | "done";
+  studentName?: string;
+  questionNumber?: number;
 }
 
 async function logout() {
@@ -29,6 +31,7 @@ export default function SolutionPage() {
   const [solving, setSolving] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [studentName, setStudentName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   // 이 탭에서 직접 스트리밍 중이면 폴링이 더 짧은 부분 풀이로 덮어쓰지 않도록
   const solvingRef = useRef(false);
@@ -62,6 +65,7 @@ export default function SolutionPage() {
     try {
       const form = new FormData();
       form.append("image", f);
+      form.append("studentName", studentName);
       const res = await fetch("/api/solve-current", { method: "POST", body: form });
       if (res.status === 401) { window.location.href = "/admin"; return; }
       if (!res.ok) {
@@ -93,7 +97,7 @@ export default function SolutionPage() {
       setSolving(false);
       solvingRef.current = false;
     }
-  }, []);
+  }, [studentName]);
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -110,6 +114,51 @@ export default function SolutionPage() {
 
   const isSolving = solving || current?.status === "solving";
 
+  const [copyState, setCopyState] = useState<"idle" | "loading" | "done">("idle");
+
+  const handleCopy = useCallback(async () => {
+    if (!current?.imageUrl || !current?.explanation || copyState !== "idle") return;
+    setCopyState("loading");
+    try {
+      const res = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: current.imageUrl }),
+      });
+      if (!res.ok) throw new Error("transcribe API 실패");
+      const { transcription } = await res.json();
+      const context = `아래 문제와 GPT의 해설이 있고 내가 이해가지 않는 부분이 있어.\n\n## 문제\n${transcription}\n\n## GPT 해설\n${current.explanation}`;
+
+      // navigator.clipboard 우선, 실패 시 execCommand 폴백
+      let copied = false;
+      if (navigator.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(context);
+          copied = true;
+        } catch {}
+      }
+      if (!copied) {
+        const ta = document.createElement("textarea");
+        ta.value = context;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        copied = document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      if (!copied) throw new Error("클립보드 복사 실패");
+
+      setCopyState("done");
+      setTimeout(() => setCopyState("idle"), 2000);
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "복사에 실패했습니다.");
+      setCopyState("idle");
+      setTimeout(() => setErrorMsg(""), 3000);
+    }
+  }, [current, copyState]);
+
   return (
     <div
       className={`min-h-screen bg-white flex flex-col transition-colors ${dragging ? "bg-indigo-50" : ""}`}
@@ -125,6 +174,19 @@ export default function SolutionPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={studentName}
+            onChange={(e) => setStudentName(e.target.value)}
+            placeholder="학생 이름"
+            className="text-sm border border-gray-200 rounded-md px-2 py-1 w-32 focus:outline-none focus:border-indigo-300"
+          />
+          {current?.studentName && (
+            <span className="text-sm font-medium text-indigo-600">
+              {current.studentName}
+              {current.questionNumber != null && <span className="ml-1 text-gray-400 font-normal">#{current.questionNumber}번</span>}
+            </span>
+          )}
           {isSolving && (
             <span className="text-xs text-amber-500 animate-pulse">GPT 풀이 생성 중...</span>
           )}
@@ -134,6 +196,15 @@ export default function SolutionPage() {
           {errorMsg && <span className="text-xs text-red-500">{errorMsg}</span>}
         </div>
         <div className="flex items-center gap-3">
+          {current?.status === "done" && current.explanation && (
+            <button
+              onClick={handleCopy}
+              disabled={copyState !== "idle"}
+              className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {copyState === "loading" ? "전사 중..." : copyState === "done" ? "복사됨!" : "GPT에 복사"}
+            </button>
+          )}
           <a href="/history" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">← 히스토리</a>
           <label className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer underline underline-offset-2">
             사진 업로드

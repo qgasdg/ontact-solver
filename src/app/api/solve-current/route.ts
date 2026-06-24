@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import OpenAI from "openai";
 import { kv } from "@vercel/kv";
 import { v4 as uuidv4 } from "uuid";
-import { setCurrentProblem, saveProblem, uploadImage, useKV } from "@/lib/storage";
+import { setCurrentProblem, saveProblem, uploadImage, useKV, getNextQuestionNumber } from "@/lib/storage";
 
 export const maxDuration = 60;
 
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("image") as File;
+    const studentName = ((formData.get("studentName") as string | null) ?? "").trim().slice(0, 50);
 
     if (!file) return Response.json({ error: "이미지가 없습니다." }, { status: 400 });
 
@@ -62,8 +63,9 @@ export async function POST(req: NextRequest) {
     const mimeType = file.type || "image/jpeg";
     const problemId = uuidv4();
     const createdAt = new Date().toISOString();
+    const questionNumber = await getNextQuestionNumber();
 
-    await setCurrentProblem({ id: problemId, imageUrl, explanation: "", createdAt, status: "solving" });
+    await setCurrentProblem({ id: problemId, imageUrl, explanation: "", createdAt, status: "solving", studentName, questionNumber });
 
     const stream = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -103,7 +105,7 @@ export async function POST(req: NextRequest) {
           }
         };
 
-        safeEnqueue(JSON.stringify({ id: problemId, imageUrl, createdAt }) + "\n");
+        safeEnqueue(JSON.stringify({ id: problemId, imageUrl, createdAt, studentName, questionNumber }) + "\n");
 
         // 폴링 클라이언트도 부분 풀이를 볼 수 있게 주기적으로 KV 갱신
         let lastFlush = Date.now();
@@ -122,8 +124,8 @@ export async function POST(req: NextRequest) {
           }
         } finally {
           await Promise.all([
-            setCurrentProblem({ id: problemId, imageUrl, explanation, createdAt, status: "done" }),
-            saveProblem({ id: problemId, imageUrl, explanation, createdAt }),
+            setCurrentProblem({ id: problemId, imageUrl, explanation, createdAt, status: "done", studentName, questionNumber }),
+            saveProblem({ id: problemId, imageUrl, explanation, createdAt, studentName, questionNumber }),
           ]);
         }
 
